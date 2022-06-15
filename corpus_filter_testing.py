@@ -3,6 +3,7 @@ import os
 import pickle
 import random
 import re
+import requests
 import typing
 
 import pandas as pd
@@ -11,12 +12,24 @@ import parameters as p
 
 DATA_DIR = os.path.join(p.DATA)
 
-input_filepath = \
-    "/home/denis/Data/Downloads/enwiki-20220520-pages-articles-multistream.xml"
+# This code was built and tested on the wikipedia dump of 2022-05-20
+wikipedia_xml_dump_url = "https://dumps.wikimedia.org/enwiki/20220520/" \
+                         "enwiki-20220520-pages-articles-multistream.xml.bz2"
+# The input file and un-chunked output files will be stored in the
+# raw_data_dir. Note that these files will likely both be greater than 20 gb
+# in size.
+raw_data_dir = "/home/denis/Data/PyCharm Data/" \
+               "UVMR_Essential_Vocabulary/Raw Data"
+# The chunked, compressed data files will be stored in output_dir. Note that
+# these files are likely to total more than 5 gb.
+output_dir = "/home/denis/PycharmProjects/" \
+             "UVMR_Essential_Vocabulary/Data/Wikipedia Corpus"
 
-# Define a translation map for removing punctuation via str.translate,
-# which is very efficient. Does not include parentheses, dashes, percentile
-# signs, or periods.
+# Define two translation maps for removing punctuation via str.translate,
+# which is very efficient. The first will consist of punctuation to remove.
+# The second will consist of punctuation around which to insert spaces,
+# so that occurrences can be treated as tokens when splitting on white space.
+# Periods are handles in the code, and are used to split documents.
 punctuation_exclude = "!\"#$&'*+:<=>@[\\]^_`{|}~!?%"
 translation_exclude = str.maketrans({
     char: '' for char in punctuation_exclude
@@ -28,37 +41,88 @@ translation_include = str.maketrans({
 
 
 def main():
-    # extract_documents(
-    #     input_filepath,
-    #     "/media/denis/Data Backup/temp/working.txt"
+    generate_corpus()
+
+
+def generate_corpus(
+        xml_url: str = wikipedia_xml_dump_url,
+        raw_data_dir: str = raw_data_dir,
+        output_dir: str = output_dir
+):
+    # Get data file if not already acquired.
+    get_wikipedia_dump(xml_url, raw_data_dir)
+
+    # Extract documents and export them to a text file, 1 line per document.
+    # This approach preserves RAM.
+    extract_documents(xml_url, raw_data_dir, output_dir)
+
+    # Randomize documents in document text file and store them in manageable
+    # "chunks" of 1,000,000 documents in compressed files. These files amount
+    # to about 150 files of 38 gb each.
+    # chunk_documents_to_files(
+    #     "/media/denis/Data Backup/temp/working.txt",
+    #     1_000_000
     # )
-    chunk_documents_to_files(
-        "/media/denis/Data Backup/temp/working.txt",
-        1_000_000
-    )
+
+
+def get_wikipedia_dump(
+        xml_url: str = wikipedia_xml_dump_url,
+        raw_data_dir: str = raw_data_dir
+):
+    bz2_file_name = xml_url.rsplit('/', 1)[-1]
+    bz2_file_path = os.path.join(raw_data_dir, bz2_file_name)
+
+    # Check if xml_file has already been downloaded and extracted
+    if os.path.exists(bz2_file_path):
+        print("Compressed XML data file found in raw data directory...\n"
+              "Download of compressed XML data file canceled.")
+    else:
+        # Download and extract wikipedia dump.
+        print("Downloading compressed XML data file...")
+        response = requests.get(xml_url)
+        if not response:
+            raise FileNotFoundError(
+                f"Request for file at {xml_url} returned "
+                f"{response.status_code}."
+            )
+        else:
+            with bz2.BZ2File(bz2_file_path, 'wb') as out_file:
+                out_file.write(response.content)
+            print("Compressed XML data file successfully downloaded.")
 
 
 def extract_documents(
-        input_filepath: str,
-        document_storage_filepath: str
+        xml_url: str = wikipedia_xml_dump_url,
+        raw_data_dir: str = raw_data_dir,
+        output_dir: str = output_dir
 ) -> None:
+    # Get path to input file.
+    input_file_name = xml_url.rsplit('/', 1)[-1]
+    input_file_path = os.path.join(raw_data_dir, input_file_name)
+
     # Whenever a line is identified in the input xml file that looks like a
     # paragraph of potential input text, we will call process_paragraph,
     # and give it this file pointer to which to add documents found in the
     # paragraph.
-    document_storage_file = open(document_storage_filepath, 'a')
+    document_storage_file = open(
+        os.path.join(raw_data_dir, "documents.txt"), 'a'
+    )
     # Initialize some counters with which to report progress via stdout
     articles_extracted = 0
     documents_generated = 0
     # Used to prevent occasionally printing same line to stdout more than once
     last_article_count_out = 0
+
     print(f"Beginning extraction of documents from input file at "
           f"{pd.Timestamp.now().strftime('%H:%M:%S')}")
-    with open(input_filepath, 'r') as file:
+
+    with bz2.BZ2File(input_file_path, 'r') as file:
         print(f"Successfully accessed input file...\n")
         # We will look at each line of the wikipedia xml dump file, weeding
         # out lines that are not human-readable paragraphs of text.
         for line in file:
+            # Convert from binary string
+            line = line.decode('utf-8')
             # Strip leading whitespace - xml tags are variably indented for
             # readability
             line = line.lstrip()
@@ -137,11 +201,13 @@ def extract_documents(
             # pointer, and get back the number of documents added to the file.
             documents_generated += process_paragraph(document_storage_file,
                                                      line)
-        print(f"\nFinished extracting documents from articles at "
-              f"{pd.Timestamp.now().strftime('%H:%M:%S')}.\n"
-              f"Extracted {articles_extracted:,} articles.\n"
-              f"Extracted {documents_generated:,} documents.\n")
+
     document_storage_file.close()
+
+    print(f"\nFinished extracting documents from articles at "
+          f"{pd.Timestamp.now().strftime('%H:%M:%S')}.\n"
+          f"Extracted {articles_extracted:,} articles.\n"
+          f"Extracted {documents_generated:,} documents.\n")
 
 
 def process_paragraph(
@@ -262,14 +328,15 @@ def chunk_documents_to_files(
 
     for file_num in range(num_files - 1):
         file_documents = documents[
-            file_num*documents_per_file:(file_num+1)*documents_per_file
-        ]
+                         file_num * documents_per_file:(
+                                                                   file_num + 1) * documents_per_file
+                         ]
         dump_file(
             file_documents,
             f"corpus_file_{str(file_num + 1).rjust(3, '0')}_of_{num_files}",
             output_filepath
         )
-    file_documents = documents[(num_files-1)*documents_per_file:-1]
+    file_documents = documents[(num_files - 1) * documents_per_file:-1]
     dump_file(
         file_documents,
         f"corpus_file_{str(num_files).rjust(3, '0')}_of_{num_files}",
