@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import bz2
 import os
 import pickle
@@ -24,6 +26,9 @@ raw_data_dir = "/home/denis/Data/PyCharm Data/" \
 # these files are likely to total more than 5 gb.
 output_dir = "/home/denis/PycharmProjects/" \
              "UVMR_Essential_Vocabulary/Data/Wikipedia Corpus"
+# Directory to which to output test data files if option is selected.
+test_data_dir = "/home/denis/PycharmProjects/" \
+                "UVMR_Essential_Vocabulary/Data/Test Data"
 
 # Define two translation maps for removing punctuation via str.translate,
 # which is very efficient. The first will consist of punctuation to remove.
@@ -41,20 +46,26 @@ translation_include = str.maketrans({
 
 
 def main():
-    generate_corpus()
+    generate_corpus(test_data_dir=test_data_dir)
 
 
 def generate_corpus(
         xml_url: str = wikipedia_xml_dump_url,
         raw_data_dir: str = raw_data_dir,
-        output_dir: str = output_dir
+        output_dir: str = output_dir,
+        test_data_dir: None | str = None,
+        test_articles: int = 100
 ):
     # Get data file if not already acquired.
-    get_wikipedia_dump(xml_url, raw_data_dir)
+    get_wikipedia_dump(
+        xml_url, raw_data_dir, test_data_dir, test_articles
+    )
 
     # Extract documents and export them to a text file, 1 line per document.
     # This approach preserves RAM.
-    extract_documents(xml_url, raw_data_dir, output_dir)
+    extract_documents(
+        xml_url, raw_data_dir, test_data_dir
+    )
 
     # Randomize documents in document text file and store them in manageable
     # "chunks" of 1,000,000 documents in compressed files. These files amount
@@ -67,7 +78,9 @@ def generate_corpus(
 
 def get_wikipedia_dump(
         xml_url: str = wikipedia_xml_dump_url,
-        raw_data_dir: str = raw_data_dir
+        raw_data_dir: str = raw_data_dir,
+        test_data_file_path: None | str = None,
+        test_articles: int = 100
 ):
     bz2_file_name = xml_url.rsplit('/', 1)[-1]
     bz2_file_path = os.path.join(raw_data_dir, bz2_file_name)
@@ -90,11 +103,34 @@ def get_wikipedia_dump(
                 out_file.write(response.content)
             print("Compressed XML data file successfully downloaded.")
 
+    # If a path to a test data directory is specified, output raw text of
+    # specified number of articles to "Raw Data.txt", leaving a blank line in
+    # between each line for readability.
+    if test_data_file_path:
+        test_data_file_path = os.path.join(
+            test_data_file_path, "Raw Data.txt"
+        )
+        with (
+            bz2.BZ2File(bz2_file_path, 'rb') as in_file,
+            open(test_data_file_path, 'w') as test_data_file
+        ):
+            articles_extracted = 0
+            for line in in_file:
+                line = line.decode('utf-8')
+                test_data_file.write(line + '\n')
+                if line == "  </page>\n":
+                    articles_extracted += 1
+                if line.startswith("    <redirect title="):
+                    articles_extracted -= 1
+                if articles_extracted >= test_articles:
+                    break
+
 
 def extract_documents(
         xml_url: str = wikipedia_xml_dump_url,
         raw_data_dir: str = raw_data_dir,
-        output_dir: str = output_dir
+        test_data_file_path: None | str = None,
+        test_articles: int = 100
 ) -> None:
     # Get path to input file.
     input_file_name = xml_url.rsplit('/', 1)[-1]
@@ -104,9 +140,20 @@ def extract_documents(
     # paragraph of potential input text, we will call process_paragraph,
     # and give it this file pointer to which to add documents found in the
     # paragraph.
-    document_storage_file = open(
-        os.path.join(raw_data_dir, "documents.txt"), 'a'
-    )
+    if test_data_file_path:
+        document_storage_file = open(
+            os.path.join(test_data_file_path, "Processed Data.txt"), 'a'
+        )
+        test_data_file_path = os.path.join(
+            test_data_file_path, "Filtered Data.txt"
+        )
+        test_data_file = open(test_data_file_path, 'w')
+    else:
+        document_storage_file = open(
+            os.path.join(raw_data_dir, "documents.txt"), 'a'
+        )
+        test_data_file = None
+
     # Initialize some counters with which to report progress via stdout
     articles_extracted = 0
     documents_generated = 0
@@ -140,7 +187,7 @@ def extract_documents(
                 continue
             # Check for redirects. Redirects are also marked up with
             # <page></page>, but contain no lines that aren't filtered out.
-            # Therefore, they can be used to avoid overcounting the number of
+            # Therefore, they can be used to avoid over-counting the number of
             # articles actually parsed.
             if line.startswith("<redirect title="):
                 articles_extracted -= 1
@@ -199,9 +246,17 @@ def extract_documents(
             # human-readable data. We pass that to process_paragraph,
             # which returns the number of documents, along with the file
             # pointer, and get back the number of documents added to the file.
-            documents_generated += process_paragraph(document_storage_file,
-                                                     line)
+            documents_generated += process_paragraph(
+                document_storage_file, line
+            )
 
+            if test_data_file:
+                test_data_file.write(line + '\n')
+                if articles_extracted >= test_articles:
+                    break
+
+    if test_data_file:
+        test_data_file.close()
     document_storage_file.close()
 
     print(f"\nFinished extracting documents from articles at "
