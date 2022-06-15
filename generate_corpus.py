@@ -34,12 +34,13 @@ test_data_dir = "/home/denis/PycharmProjects/" \
 # which is very efficient. The first will consist of punctuation to remove.
 # The second will consist of punctuation around which to insert spaces,
 # so that occurrences can be treated as tokens when splitting on white space.
-# Periods are handles in the code, and are used to split documents.
-punctuation_exclude = "!\"#$&'*+:<=>@[\\]^_`{|}~!?%"
+# Periods, exclamation points, and question marks are handles in the code,
+# and are used to split documents.
+punctuation_exclude = "#$&'*+<=>@[\\]^_`{|}~%"
 translation_exclude = str.maketrans({
     char: '' for char in punctuation_exclude
 })
-punctuation_include = "-()/;,"
+punctuation_include = "-()/;,:!.\""
 translation_include = str.maketrans({
     char: f' {char} ' for char in punctuation_include
 })
@@ -142,7 +143,7 @@ def extract_documents(
     # paragraph.
     if test_data_file_path:
         document_storage_file = open(
-            os.path.join(test_data_file_path, "Processed Data.txt"), 'a'
+            os.path.join(test_data_file_path, "Processed Data.txt"), 'w'
         )
         test_data_file_path = os.path.join(
             test_data_file_path, "Filtered Data.txt"
@@ -150,7 +151,7 @@ def extract_documents(
         test_data_file = open(test_data_file_path, 'w')
     else:
         document_storage_file = open(
-            os.path.join(raw_data_dir, "documents.txt"), 'a'
+            os.path.join(raw_data_dir, "documents.txt"), 'w'
         )
         test_data_file = None
 
@@ -197,19 +198,26 @@ def extract_documents(
             if len(line) < 100:
                 continue
             # Skip lines starting and ending with two curly brackets
+            # These are almost always a hyper-linked word or phrase.
+            # Eliminates the very rare block of text that starts and ends
+            # with a hyperlink.
             if line.startswith('{{') and line.endswith('}}\n'):
                 continue
             # Skip lines starting and ending with two (or more) equals signs
+            # Gets rid of section headers
             if line.startswith('==') and line.endswith('==\n'):
                 continue
             # Skip lines enclosed in carets
             if line.startswith('<') and line.endswith('>\n'):
                 continue
             # Skip lines starting with "<text bytes="
+            # These serve some function in each article, but review of 100
+            # occurrences show no line containing useful text.
             if line.startswith("<text bytes="):
                 continue
-            # Skip lines starting with "}}</text>"
-            if line.startswith("}}</text>"):
+            # Skip lines starting with "{{" and ending with "}}</text>"
+            # These appear to have something to do with redirects
+            if line.startswith("{{") and line.endswith("}}</text>"):
                 continue
             # Eliminate picture links and descriptions
             if line.startswith("[[File:"):
@@ -225,29 +233,36 @@ def extract_documents(
                     line.startswith("!")
             ):
                 continue
-            # Remove references
+            # Remove lists
             if line.startswith('*'):
                 continue
-            # Remove categories
-            if line.endswith("]]\n") or line.endswith("]]</text>\n"):
+            # Remove category links
+            if (line.startswith("[[") and line.endswith("]]\n")) or \
+               (line.startswith("[[") and line.endswith("]]</text>\n")):
                 continue
-            # Miscellaneous other debris to remove
-            if (
-                    line.startswith("{{Redirect category shell|") or
-                    line.startswith("{{Infobox") or
-                    line == "}}\n" or
-                    line.startswith("{{Rcat shell") or
-                    line.startswith("{{rcat shell") or
-                    line.startswith("{{multiple image") or
-                    line.startswith("# ")
-            ):
+            # Removes both components of "{{ ... }}" routinely broken up over
+            # multiple lines
+            if line.startswith("{{") and "}}" not in line[2:]:
+                continue
+            if line == "}}\n" or line == "}}<\text>\n":
+                continue
+            # Remove numbered lists
+            if line.startswith("#"):
+                continue
+            # Remove some equations:
+            if (line.startswith(":&lt;math") and
+                line.endswith("/math&gt;\n")):
+                continue
+            # Remove a particular style of making references
+            if (line.startswith("&lt;ref name=") and
+                line.endswith("/ref&gt;\n")):
                 continue
             # We're now likely looking at a line that is a paragraph of
             # human-readable data. We pass that to process_paragraph,
             # which returns the number of documents, along with the file
             # pointer, and get back the number of documents added to the file.
             documents_generated += process_paragraph(
-                document_storage_file, line
+                document_storage_file, line, bool(test_data_file_path)
             )
 
             if test_data_file:
@@ -267,7 +282,8 @@ def extract_documents(
 
 def process_paragraph(
         document_storage_file: typing.TextIO,
-        paragraph: str
+        paragraph: str,
+        insert_blank_line: bool = False
 ) -> int:
     # First apply all processes that will significantly shorten the block of
     # text, and then check to see if length has become insignificant before
@@ -297,8 +313,14 @@ def process_paragraph(
 
     # Removing other special XML characters and odds and ends
     paragraph = re.sub(
-        r"&amp;|nbsp;|&quot;",
+        r"&amp;|nbsp;",
         '', paragraph
+    )
+
+    # Replace &quot; with double quotes, which are not otherwise used.
+    paragraph = re.sub(
+        r"&quot;",
+        '"', paragraph
     )
 
     # Remove punctuation that we want to ignore
@@ -362,6 +384,10 @@ def process_paragraph(
                 continue
         documents_generated += 1
         document_storage_file.write(' '.join(document) + '\n')
+        # If we're generating test data, we'll add a blank line in between
+        # documents for readability.
+        if test_data_dir:
+            document_storage_file.write('\n')
     # If we don't call flush on the storage buffer, it will accumulate data
     # until we close the file, and overflow memory.
     document_storage_file.flush()
