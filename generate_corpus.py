@@ -47,7 +47,7 @@ translation_include = str.maketrans({
 
 
 def main():
-    generate_corpus(test_data_dir=test_data_dir)
+    generate_corpus()
 
 
 def generate_corpus(
@@ -71,10 +71,10 @@ def generate_corpus(
     # Randomize documents in document text file and store them in manageable
     # "chunks" of 1,000,000 documents in compressed files. These files amount
     # to about 150 files of 38 gb each.
-    # chunk_documents_to_files(
-    #     "/media/denis/Data Backup/temp/working.txt",
-    #     1_000_000
-    # )
+    chunk_documents_to_files(
+        os.path.join(raw_data_dir, 'documents.txt'),
+        1_000_000
+    )
 
 
 def get_wikipedia_dump(
@@ -180,7 +180,7 @@ def extract_documents(
                 articles_extracted += 1
                 if (
                         articles_extracted % 10_000 == 0 and
-                        articles_extracted < last_article_count_out
+                        articles_extracted > last_article_count_out
                 ):
                     print(f"Extracted Article {articles_extracted:,}: "
                           f"{documents_generated:,} Documents Generated.")
@@ -306,14 +306,15 @@ def process_paragraph(
     for conversion in conversions:
         fragments = conversion[2:-2].split('|')
         substitution = fragments[1] + ' '
-        if fragments[2] not in [
-            '-', '–', 'and', 'and(-)', 'or', 'to', 'to(-)',
-            'to about', '+/-', '±', '+', ',', ', and', ', or',
-            'by', 'x', '×', 'xx', '*'
-        ]:
+        if len(fragments) >= 3 and fragments[2] not in [
+                '-', '–', 'and', 'and(-)', 'or', 'to', 'to(-)',
+                'to about', '+/-', '±', '+', ',', ', and', ', or',
+                'by', 'x', '×', 'xx', '*']:
             substitution += fragments[2]
-        else:
+        elif len(fragments) >= 5:
             substitution += fragments[4]
+        else:
+            substitution = 'processgarbagemarker'
         substitution = re.sub(r"[\[\]]", '', substitution)
         paragraph = paragraph.replace(conversion, substitution, 1)
 
