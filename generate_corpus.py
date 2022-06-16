@@ -36,11 +36,11 @@ test_data_dir = "/home/denis/PycharmProjects/" \
 # so that occurrences can be treated as tokens when splitting on white space.
 # Periods, exclamation points, and question marks are handles in the code,
 # and are used to split documents.
-punctuation_exclude = "#$&'*+<=>@[\\]^_`{|}~%"
+punctuation_exclude = "#$&*+<=>@[\\]^_`{|}~%"
 translation_exclude = str.maketrans({
     char: '' for char in punctuation_exclude
 })
-punctuation_include = "-()/;,:!.\""
+punctuation_include = "-()/;,:!.?'\""
 translation_include = str.maketrans({
     char: f' {char} ' for char in punctuation_include
 })
@@ -289,22 +289,67 @@ def process_paragraph(
     # text, and then check to see if length has become insignificant before
     # doing further cleanup.
 
-    # Remove end of sentence citations - multiple ways to do these...
-    paragraph = re.sub(r"}}.*?}}", '}}', paragraph)
-    paragraph = re.sub(r"\{\{.*?}}", '', paragraph)
-    paragraph = re.sub(r"&lt;ref&gt.*?&lt;/ref&gt;", '', paragraph)
-    # Eliminate editor comments, as well as ways of creating special links
+    # Deal with language templates
+    langs = re.findall("\{\{lang\|.*?}}", paragraph)
+    for lang in langs:
+        fragments = lang[2:-2].split('|')
+        if '=' not in fragments[-1]:
+            substitution = re.sub(r"'", '', fragments[-1])
+        else:
+            substitution = fragments[-2]
+        paragraph = paragraph.replace(lang, substitution, 1)
+
+    # Deal with conversion templates
+    # Only the most common cases are handled here - there are complicated
+    # options that would take many, many lines of code.
+    conversions = re.findall("\{\{convert\|.*?}}", paragraph)
+    for conversion in conversions:
+        fragments = conversion[2:-2].split('|')
+        substitution = fragments[1] + ' '
+        if fragments[2] not in [
+            '-', '–', 'and', 'and(-)', 'or', 'to', 'to(-)',
+            'to about', '+/-', '±', '+', ',', ', and', ', or',
+            'by', 'x', '×', 'xx', '*'
+        ]:
+            substitution += fragments[2]
+        else:
+            substitution += fragments[4]
+        substitution = re.sub(r"[\[\]]", '', substitution)
+        paragraph = paragraph.replace(conversion, substitution, 1)
+
+    # Deal with non-english translation templates:
+    translations = re.findall("\{\{transl\|.*?}}", paragraph)
+    for translation in translations:
+        fragments = translation[2:-2].split('|')
+        substitution = re.sub(r"[\[\]]", '', fragments[-1])
+        paragraph = paragraph.replace(translation, substitution, 1)
+
+    # Eliminate a specific way to create end of sentence links
+    paragraph = re.sub(r"&lt;ref.*?/ref&gt;", '', paragraph)
+    # Eliminate editor comments, and a number of special features
     paragraph = re.sub(r"&lt.*?&gt;", '', paragraph)
+    # Remove end of sentence citations created via templates
+    paragraph = re.sub(r"}}[^{][^{]*?}}", '}}', paragraph)
+    paragraph = re.sub(r"\{\{.*?}}", '', paragraph)
     # This will rarely create a scenario where we have the string "()"
     paragraph = re.sub(r"\(\)", '', paragraph)
-    # Replace hyperlinks with hyperlink text:
+
+
+    # Replace hyperlinks within wikipedia with hyperlink text:
     links = re.findall("\[\[.*?]]", paragraph)
     for link in links:
-        if '|' not in link:
-            paragraph = paragraph.replace(link, link[2:-2], 1)
+        fragments = link[2:-2].split('|')
+        paragraph = paragraph.replace(link, fragments[-1], 1)
+    # deal with external hyperlinks and scenarios where letters or words are
+    # inserted into incomplete quotes
+    elinks = re.findall("\[.*?]", paragraph)
+    for link in elinks:
+        fragments = link[1:-1].split()
+        if len(fragments) == 1:
+            substitution = fragments[0]
         else:
-            bar_index = len(link) - link[::-1].index("|")
-            paragraph = paragraph.replace(link, link[bar_index:-2], 1)
+            substitution = str(fragments[1:])
+        paragraph = paragraph.replace(link, substitution, 1)
 
     # Again kill blocks of text of less than 100 characters (We did this
     # before process_paragraph, but have now cleaned out a lot more junk)
@@ -323,13 +368,20 @@ def process_paragraph(
         '"', paragraph
     )
 
+    # Deal with "''" and "'''" used for italics and bold notation
+    paragraph = re.sub(r"'''", '', paragraph)
+    paragraph = re.sub(r"''", '', paragraph)
+
+    # Deal with contractions by removing apostrophe and splicing words
+    paragraph = re.sub(r"([a-zA-Z])'([a-zA-Z])", r"\1\2", paragraph)
+
+    # Comma-separated numbers need their commas pulled
+    paragraph = re.sub(r"([0-9]),([0-9])", r"\1\2", paragraph)
+
     # Remove punctuation that we want to ignore
     paragraph = paragraph.translate(translation_exclude)
 
-    # Put spaces on either side of punctuation we want to include
-    paragraph = paragraph.translate(translation_include)
-
-    # We're going to split on periods, but need to deal with special cases
+    # Splitting will involve periods, but we need to deal with special cases
     # where periods are used for non-sentence ending purpose.
 
     # Need to replace e.g., i.e., etc., etc...
@@ -349,35 +401,27 @@ def process_paragraph(
     # Convert decimal numbers to just number before decimal (round down)
     paragraph = re.sub(r"([0-9]+)\.[0-9]+", r"\1", paragraph)
 
-    # Some last cleanup...
-
     # Set all characters to lower case
     paragraph = paragraph.lower()
-    # Eliminate multiple spaces
-    paragraph = re.sub(r" +", " ", paragraph)
 
-    # Split into documents on periods - also removes periods
-    documents = paragraph.split('.')
+    # Split into documents - strings of tokens separated by spaces
+    documents = split_paragraph(paragraph)
+
     # We want to convert our documents to lists of tokens and add them to our
     # data. We'll create a 'documents_generated' variable to track how many
     # we've created.
     documents_generated = 0
     for document in documents:
-        document = document.strip()
-        # Some documents were just the new lines that were at the ends of the
-        # paragraphs, and are now empty strings after document.strip()
-        if document == '':
-            continue
         # Split document on spaces
         document = document.split()
         # Ditch documents consisting of single token
         if len(document) == 1:
             continue
-        # For documents of three or less tokens, if any token includes
-        # anything other than letters, drop them.
+        # For documents of three or less tokens, if any but the last token
+        # consists of anything but letters, ditch the document.
         if len(document) <= 3:
             drop = False
-            for token in document:
+            for token in document[0:-1]:
                 if not token.isalpha():
                     drop = True
             if drop:
@@ -393,6 +437,39 @@ def process_paragraph(
     document_storage_file.flush()
     # Return the number of documents we've added to the storage file.
     return documents_generated
+
+
+def split_paragraph(
+        paragraph: str
+) -> list[str]:
+    splitters = ['."', '!"', '?"', '.', '!', '?', ]
+
+    lines = list()
+    current_line = str()
+    for i in range(len(paragraph)):
+        current_line += paragraph[i]
+        if current_line[-2:] in splitters:
+            lines.append(current_line.strip())
+            current_line = str()
+            continue
+        if current_line[-2:-1] in splitters:
+            lines.append(current_line[:-1].strip())
+            current_line = str()
+            continue
+        # This case deals with a paragraph not ending with a splitter.
+        if i == len(paragraph) - 1:
+            if current_line != '\n':
+                lines.append(current_line)
+
+    # Take the punctuation we want to include and slap a space on either side
+    # of it, allowing the line to be split into documents using spaces.
+    for i in range(len(lines)):
+        lines[i] = lines[i].translate(translation_include)
+        # Eliminate multiple spaces we have introduced
+        lines[i] = re.sub(r" +", " ", lines[i])
+        pass
+
+    return lines
 
 
 def chunk_documents_to_files(
