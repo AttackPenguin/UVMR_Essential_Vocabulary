@@ -2290,8 +2290,6 @@ jordan - hare stadium is the home field of the auburn football team and seats up
 
 legion field is home of the uab blazers football program and the birmingham bowl .
 
-it seats 71594 .
-
 ladd–peebles stadium in mobile is the home of the university of south alabama football team , and serves as the home of the ncaa senior bowl , lendingtree bowl , and alabama - mississippi all star classic ; the stadium seats 40646 .
 
 in 2009 , bryant–denny stadium and jordan - hare stadium became the homes of the alabama high school athletic association state football championship games , after previously being held at legion field in birmingham .
@@ -2403,6 +2401,10 @@ when she had achilles , peleus noticed , tore him from the flames with only a bu
 later chiron exhumed the body of the damysus , who was the fastest of all the giants , removed the ankle , and incorporated it into achilles ' burnt foot .
 
 " it is said .
+
+.
+
+.
 
 that he ' ( achilles ) ' was called podarkes ( podarces , swift - footed ) by the poet ' homer ' , because , it is said , thetis gave the newborn child the wings of arke ( arce ) and podarkes means that his feet had the wings of arke .
 
@@ -2662,8 +2664,6 @@ on the island of astypalaea in the sporades , in sparta which had a sanctuary , 
 
 the cult of achilles is illustrated in the 500 bce polyxena sarcophagus , which depicts the sacrifice of polyxena near the tumulus of achilles .
 
-strabo ( 13 .
-
 2 ) also suggested that such a cult of achilles existed in troad :
 
 the spread and intensity of the heros veneration among the greeks that had settled on the northern coast of the pontus euxinus , todays black sea , appears to have been remarkable .
@@ -2797,8 +2797,6 @@ file : akhilleus embassy staatliche antikensammlungen 8770 .
 pgthe embassy to achilles , attic red - figure hydria , c .
 
 480 bc ( staatliche antikensammlungen , berlin )
-
-file : ambrosianiliadpict47achilles .
 
 pgachilles sacrificing to zeus for patroclus ' safe return , from the ambrosian iliad , a 5th - century illuminated manuscript
 
@@ -3648,8 +3646,6 @@ general ulysses grants victories at the battle of shiloh and in the vicksburg ca
 
 responding to criticism of grant after shiloh , lincoln had said , " i cant spare this man .
 
-he fights . "
-
 with grant in command , lincoln felt the union army could advance in multiple theaters , while also including black troops .
 
 meades failure to capture lees army after gettysburg and the continued passivity of the army of the potomac persuaded lincoln to promote grant to supreme commander .
@@ -4188,8 +4184,6 @@ his father , nicomachus , died when aristotle was a child , and he was brought u
 
 at seventeen or eighteen years of age he joined platos academy in athens and remained there until the age of thirty - seven ( c .
 
-347 bc ) .
-
 shortly after plato died , aristotle left athens and , at the request of philip ii of macedon , tutored alexander the great beginning in 343 bc .
 
 he established a library in the lyceum which helped him to produce many of his hundreds of books on papyrus scrolls .
@@ -4213,6 +4207,8 @@ aristotles influence on logic continued well into the 19th century .
 in addition , his ethics , though always influential , gained renewed interest with the modern advent of virtue ethics .
 
 aristotle has been called " the father of logic " , " the father of biology " , " the father of political science " , " the father of zoology " , " the father of embryology " , " the father of natural law " , " the father of scientific method " , " the father of rhetoric " , " the father of psychology " , " the father of realism " , " the father of criticism " , " the father of individualism " , " the father of teleology " , and " the father of meteorology " .
+
+efnnamelitlist1
 
 in general , the details of aristotles life are not well - established .
 
@@ -4456,9 +4452,13 @@ he stated that geological change was too slow to be observed in one persons life
 
 the geologist charles lyell noted that aristotle described such change , including " lakes that had dried up " and " deserts that had become watered by rivers " , giving as examples the growth of the nile delta since the time of homer , and " the upheaving of one of the aeolian islands , previous to a volcanic eruption . "
 
+'
+
 aristotle also made many observations about the hydrologic cycle and meteorology ( including his major writings " meteorologica " ) .
 
 for example , he made some of the earliest observations about desalination : he observed early – and correctly – that when seawater is heated , freshwater evaporates and that the oceans are then replenished by the cycle of rainfall and river runoff ( " i have proved by experiment that salt water evaporated forms fresh and the vapor does not when it condenses condense into sea water again . "
+
+)
 
 aristotle was the first person to study biology systematically , and biology forms a large part of his writings .
 
@@ -4966,7 +4966,11 @@ pg aristotle by justus van gent .
 
 oil on panel , c .
 
+1476
+
 file : lucas cranach d .
+
+.
 
 - phyllis und aristotle ( 1530 ) .
 
@@ -6110,6 +6114,8 @@ examples include depression and burnout seen in healthcare professionals , an un
 
 american sociological association .
 
+.
+
 the structure of our societies and how individuals come to exhibit charitable , philanthropic , and other pro - social , altruistic actions for the common good is a largely researched topic within the field .
 
 the american sociology association ( asa ) acknowledges public sociology saying , " the intrinsic scientific , policy , and public relevance of this field of investigation in helping to construct ' good societies ' is unquestionable " ( " altruism , morality , and social solidarity " asa ) .
@@ -6273,6 +6279,8 @@ altruism is also the central act of various hindu mythology and religious poems 
 the founder of warkari samprdaya the great saint " dhnyaneshwar maharaj " ( 1275 - 1296 ) in his " pasaydan " pray to the supreme lord " vitthal " for the wellbeing of all living organisms of the universe .
 
 swami vivekananda , the legendary hindu monk , has said - " jive prem kare jeijon , seijon sebiche iswar " ( whoever loves any living being , is serving god .
+
+.
 
 mass donation of clothes to poor people ( vastraseva ) , or blood donation camp or mass food donation ( annaseva ) for poor people is common in various hindu religious ceremonies .
 
@@ -7092,6 +7100,8 @@ after negligible resistance from the locals , muslim arabs of the umayyad caliph
 
 file : statue of dyhia in khenchela ( algeria ) .
 
+pgthumb
+
 dihya memorial in khenchela , algeria large numbers of the indigenous berber people converted to islam .
 
 christians , berber and latin speakers remained in the great majority in tunisia until the end of the 9th century and muslims only became a vast majority some time in the 10th .
@@ -7221,6 +7231,8 @@ a history of the maghrib in the islamic period .
 cambridge university press .
 
 pp .
+
+103–104
 
 the zayyanids retained their control over algeria for 3 centuries .
 
@@ -9894,8 +9906,6 @@ all such links will be deleted .
 
 add them to the open directory project ( dmoz .
 
-rg ) instead .
-
 animation is a method in which figures are manipulated to appear as moving images .
 
 in traditional animation , images are drawn or painted by hand on transparent celluloid sheets to be photographed and exhibited on film .
@@ -11758,8 +11768,6 @@ apollo riding his chariot across the sun was appropriate to the grand scale of t
 
 andre kirk agassi ( ; born april 29 , 1970 ) is an american former world no .
 
-1 tennis player .
-
 he is an eight - time major champion and an olympic gold medalist , as well as a runner - up in seven other majors .
 
 agassi is the second of five men to achieve the career grand slam in the open era and the fifth of eight overall to make the achievement .
@@ -11769,8 +11777,6 @@ he is also the first of two men to achieve the career golden slam ( career grand
 agassi was the first man to win all four singles majors on three different surfaces ( hard , clay and grass ) , and remains the most recent american man to win the french open ( in 1999 ) and the australian open ( in 2003 ) .
 
 he also won 17 masters titles and was part of the winning davis cup teams in 1990 , 1992 and 1995 .
-
-mehrotra , abhishek .
 
 ' " agassi : ' , ' last ' , ' of ' , ' the ' , ' great ' , ' americans " ' espn star .
 
@@ -11956,8 +11962,6 @@ after returning to top physical and mental shape , agassi recorded the most succ
 
 in 1998 , agassi won five titles and leapt from no .
 
-110 to no .
-
 6 , the highest jump into the top 10 made by any player during a calendar year .
 
 at wimbledon , he had an early loss in the second round to tommy haas .
@@ -12034,8 +12038,6 @@ at the year - end tennis masters cup , agassi lost in the final to federer , his
 
 at age 33 , he had been one of the oldest players to rank in the top 5 since connors , at age 35 , was no .
 
-4 in 1987 .
-
 in 2004 , agassi began the year with a five - set loss in the semi - finals of the australian open to marat safin ; the loss ended agassis 26 - match winning streak at the event .
 
 he won the masters series event in cincinnati to bring his career total to 59 top - level singles titles and a record 17 atp masters series titles , having already won seven of the nine atp masters tournament—all except the tournaments in monte carlo and hamburg .
@@ -12046,8 +12048,6 @@ he finished the year ranked no .
 
 8 , one of the oldest players to finish in the top 10 since the 36 - year - old connors was no .
 
-7 in 1988 .
-
 at the time , agassi also became the sixth male player during the open era to reach 800 career wins with his first - round victory over alex bogomolov in countrywide classic in los angeles .
 
 agassis 2005 began with a quarterfinal loss to federer at the australian open .
@@ -12057,8 +12057,6 @@ agassi had several other deep runs at tournaments , but had to withdraw from sev
 he lost to jarkko nieminen in the first round of the french open .
 
 he won his fourth title in los angeles and reached the final of the rogers cup , before falling to no .
-
-2 rafael nadal .
 
 agassis 2005 was defined by an improbable run to the us open final .
 
@@ -12966,8 +12964,6 @@ masc .
 
 ' singular ' , pl .
 
-' plural ' .
-
 ' first person singular ' , 2s .
 
 ' second person singular ' .
@@ -13763,6 +13759,8 @@ a solution to this problem is to use the optimization formulation ( viz .
 define the mean as the central point : the point about which one has the lowest dispersion ) , and redefine the difference as a modular distance ( that is , the distance on the circle : so the modular distance between 1° and 359° is 2° , not 358° ) .
 
 the arithmetic mean is often denoted by a bar , ( a .
+
+.
 
 a vinculum or macron ) , for example as in barx ( read x bar ) .
 
@@ -17238,7 +17236,11 @@ on his deathbed , unable to speak owing to advanced laryngeal cancer , huxley ma
 
 according to her account of his death in this timeless moment , she obliged with an injection at 11 : 20a .
 
+.
+
 and a second dose an hour later ; huxley died aged 69 , at 5 : 20p .
+
+.
 
 ( los angeles time ) , on 22 november 1963 .
 
@@ -17810,6 +17812,8 @@ it is only under these circumstances that the experimenter can attribute whateve
 
 under these circumstances his conclusions are reliable in the statistical sense . "
 
+)
+
 for observational data , the derivation of confidence intervals must use subjective models , as emphasized by ronald fisher and his followers .
 
 in practice , the estimates of treatment - effects from observational studies generally are often inconsistent .
@@ -17896,6 +17900,8 @@ the anova f - test ( of the null - hypothesis that all treatments have exactly t
 
 he f - test for the comparison of variances has a mixed reputation .
 
+it
+
 is not recommended as a hypothesis test to determine whether two different samples have the same variance .
 
 it is recommended for anova where two estimates of the variance of the same sample are compared .
@@ -17941,6 +17947,8 @@ anova generalizes to the study of the effects of multiple factors .
 when the experiment includes observations at all combinations of levels of each factor , it is termed factorial .
 
 factorial experiments are more efficient than a series of single factor experiments and the efficiency grows as the number of factors increases .
+
+ontgomery
 
 ( 2001 , section 5 - 2 : introduction to factorial designs ; the advantages of factorials ) consequently , factorial designs are heavily used .
 
@@ -18534,8 +18542,6 @@ emission of gaseous and volatile alkanes such as ethane , pentane , and hexane b
 
 edible vegetable oils also typically contain small fractions of biogenic alkanes with a wide spectrum of carbon numbers , mainly 8 to 35 , usually peaking in the low to upper 20s , with concentrations up to dozens of milligrams per kilogram ( parts per million by weight ) and sometimes over a hundred for the total alkane fraction .
 
-ite journal last1 moreda
-
 alkanes are found in animal products , although they are less important than unsaturated hydrocarbons .
 
 one example is the shark liver oil , which is approximately 14 pristane ( 26 , 1014 - tetramethylpentadecane , c19h40 ) .
@@ -18776,8 +18782,6 @@ generally speaking , " direct appeal statutes afford defendants the opportunity 
 
 ' review ' , on the other hand , provides an independent and civil inquiry into the validity of a conviction and sentence , and as such are generally limited to challenges to constitutional , jurisdictional , or other fundamental violations that occurred at trial . "
 
-" graham v .
-
 borgen " , 483 f 3d .
 
 475 ( 7th cir .
@@ -18913,6 +18917,10 @@ the supreme court of virginia has stated that ' " this court has repeatedly held
 ' the only exception to this is that if a defendant appeals a conviction for a crime having multiple levels of offenses , where they are convicted on a lesser offense , the appeal is of the lesser offense ; the conviction represents an acquittal of the more serious offenses .
 
 " a trial on the same charges in the circuit court does not violate double jeopardy principles , .
+
+.
+
+.
 
 subject only to the limitation that conviction in the district court for an offense lesser included in the one charged constitutes an acquittal of the greater offense ,
 
@@ -23582,8 +23590,6 @@ despite their near - equal abundance in earths crust , sodium is far more common
 
 despite its chemical similarity , lithium typically does not occur together with sodium or potassium due to its smaller size .
 
-or 25 micromolar .
-
 its diagonal relationship with magnesium often allows it to replace magnesium in ferromagnesium minerals , where its crustal concentration is about 18ppm , comparable to that of gallium and niobium .
 
 commercially , the most important lithium mineral is spodumene , which occurs in large deposits worldwide .
@@ -24595,8 +24601,6 @@ although short a was not written , as in the indic abugidas , one could argue th
 conversely , the vowel marks of the tigrinya abugida and the amharic abugida ( ironically , the original source of the term " abugida " ) have been so completely assimilated into their consonants that the modifications are no longer systematic and have to be learned as a syllabary rather than as a segmental script .
 
 even more extreme , the pahlavi abjad eventually became logographic .
-
-( see below .
 
 thus the primary classification of alphabets reflects how they treat vowels .
 
@@ -26132,6 +26136,8 @@ can be parsed as " cook ( noun used as vocative ) , cook ( imperative verb form 
 
 , but also as " cook ( imperative verb form ) , cook ( noun used as vocative ) ! "
 
+.
+
 it is more common that a syntactically unambiguous phrase has a semantic ambiguity ; for example , the lexical ambiguity in " your boss is a funny man " is purely semantic , leading to the response " funny ha - ha or funny peculiar ? "
 
 spoken language can contain many more types of ambiguities which are called phonological ambiguities , where there is more than one way to compose a set of sounds into words .
@@ -26576,7 +26582,11 @@ the trampled grass and dung attract termites from the odontotermes , microtermes
 
 on a nightly basis they tend to be more active during the first portion of night ( roughly the four hours between 8 : 00p .
 
+.
+
 and 12 : 00a .
+
+.
 
 ) ; however , they dont seem to prefer bright or dark nights over the other .
 
@@ -27098,6 +27108,8 @@ for some people , adventure becomes a major pursuit in and of itself .
 
 according to adventurer andré malraux , in his la condition humaine ( 1933 ) , " if a man is not ready to risk his life , where is his dignity ? "
 
+.
+
 outdoor adventurous activities are typically undertaken for the purposes of recreation or excitement : examples are adventure racing and adventure tourism .
 
 adventurous activities can also lead to gains in knowledge , such as those undertaken by explorers and pioneers – the british adventurer jason lewis , for example , uses adventures to draw global sustainability lessons from living within finite environmental constraints on expeditions to share with schoolchildren .
@@ -27191,6 +27203,8 @@ during the hellenistic period , according to strabo ( geographica 11 .
 ) even at the time of alexander , " it was agreed by all that the tanais river separated asia from europe " ( langgrcὡμολόγητο ἐκ πάντων ὅτι διείργει τὴν ἀσίαν ἀπὸ
 
 τῆς εὐρώπης ὁ τάναϊς ποταμός ; c .
+
+.
 
 duane roller , eratosthenes ' geography , princeton university press , 2010 , , ) this convention was revised , and the boundary between europe and asia was now considered to be the tanais ( the modern don river ) .
 
@@ -28120,7 +28134,11 @@ arubus is a government - owned bus company .
 
 its buses operate from 3 : 30a .
 
+.
+
 until 12 : 30a .
+
+.
 
 , 365 days a year .
 
@@ -30516,6 +30534,8 @@ there are three divisions—the army ( exército ) , navy ( marinha de guerra , 
 
 total manpower is 107000 ; plus paramilitary forces of 10000 ( 2015 est .
 
+.
+
 its equipment includes russian - manufactured fighters , bombers and transport planes .
 
 there are also brazilian - made emb - 312 tucanos for training , czech - made l - 39s for training and bombing , and a variety of western - made aircraft such as the c - 212aviocar , sud aviation alouette iii , etcetera a small number of faa personnel are stationed in the democratic republic of the congo ( kinshasa ) and the republic of the congo ( brazzaville ) .
@@ -30701,10 +30721,6 @@ as a result , angola is running a biocapacity reserve .
 agriculture and forestry is an area of potential opportunity for the country .
 
 the african economic outlook organization states that " angola requires 4 million tonnes a year of grain but grows only about 55 of the maize it needs , 20 of the rice and just 5 of its required wheat " .
-
-muzima , joel .
-
-mazivila , domingos .
 
 " angola 2014 " retrieved from ' www .
 
@@ -30975,8 +30991,6 @@ currently , over 300000 angolans are white , 1 million angolans are mixed race (
 in 1974 , white angolans made up a population of 330000 to 350000 people in an overall population of 6 million angolans at that time .
 
 the only reliable source on these numbers is gerald bender stanley yoder , whites in angola on the eve of independence : the politics of numbers , africa today , 21 ( 4 ) 1974 , pp .
-
-3 – 37 .
 
 today , many angolans who are not ethnic portuguese can claim portuguese nationality under portuguese law .
 
@@ -34000,6 +34014,8 @@ in 1935 , einstein collaborated with nathan rosen to produce a model of a wormho
 
 his motivation was to model elementary particles with charge as a solution of gravitational field equations , in line with the program outlined in the paper " do gravitational fields play an important role in the constitution of the elementary particles ? "
 
+.
+
 these solutions cut and pasted schwarzschild black holes to make a bridge between two patches .
 
 if one end of a wormhole was positively charged , the other end would be negatively charged .
@@ -34197,6 +34213,8 @@ time magazines frederic golden wrote that einstein was " a cartoonists dream com
 einstein received numerous awards and honors , and in 1922 , he was awarded the 1921 nobel prize in physics " for his services to theoretical physics , and especially for his discovery of the law of the photoelectric effect " .
 
 none of the nominations in 1921 met the criteria set by alfred nobel , so the 1921 prize was carried forward and awarded to einstein in 1922 .
+
+.
 
 further information about the volumes published so far can be found on the webpages of the ' einstein ' , ' papers ' , ' project ' and on the princeton university press ' einstein ' , ' page '
 
@@ -36184,8 +36202,6 @@ in 2015 , tourism in summer increased by 25 percent in contrast the previous yea
 
 ite web urlhttp : / / www .
 
-ravel - gazette .
-
 om / … / number - of - tourists - to - alba… /
 
 the bulk of the tourist industry is concentrated along the adriatic and ionian sea in the west of the country .
@@ -36750,8 +36766,6 @@ muhammad used the word allah to indicate the islamic conception of god .
 
 allah has been used as a term for god by muslims ( both arab and non - arab ) and even arab christians after the term " al - ilāh " and " allah " were used interchangeably in classical arabic by the majority of arabs who had become muslims it is also often , albeit not exclusively , used in this way by bábists , baháʼís , mandaeans , indonesian and maltese christians , and sephardi jews .
 
-" allah . "
-
 encyclopædia britannica .
 
 encyclopædia britannica similar usage by christians and sikhs in west malaysia has recently led to political and legal controversies .
@@ -37166,9 +37180,9 @@ ite news url http : / / www .
 
 ontact .
 
-z / topicsen .
-
 sp ?
+
+d4902pb2vrenyr2011mdn1
 
 following the politics of glasnost , initiated by mikhail gorbachev , civil unrest and ethnic strife grew in various regions of the soviet union , including nagorno - karabakh , an autonomous region of the azerbaijan ssr .
 
