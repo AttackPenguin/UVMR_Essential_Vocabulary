@@ -55,14 +55,14 @@ def generate_corpus(
         test_articles: int = 100
 ):
     # Get data file if not already acquired.
-    # get_wikipedia_dump(
-    #     xml_url, raw_data_dir, test_data_dir, test_articles
-    # )
+    get_wikipedia_dump(
+        xml_url, raw_data_dir, test_data_dir, test_articles
+    )
 
     # Extract documents and export them to a text file..
-    # extract_documents(
-    #     xml_url, raw_data_dir, test_data_dir, test_articles
-    # )
+    extract_documents(
+        xml_url, raw_data_dir, test_data_dir, test_articles
+    )
 
     # Randomize documents in document text file and store them in manageable
     # "chunks" of 1,000,000 documents in compressed files. These files amount
