@@ -5,79 +5,283 @@ import os
 import pickle
 import random
 import re
-import requests
-import typing
+import warnings
 
 import pandas as pd
+import requests
+import wget
+import yaml
 
-import parameters as p
-
-DATA_DIR = os.path.join(p.DATA)
-
-# This code was built and tested on the wikipedia dump of 2022-05-20
-WIKIPEDIA_XML_DUMP_URL = p.WIKIPEDIA_XML_DUMP_URL
-# The input file and un-chunked output files will be stored in the
-# raw_data_dir. Note that these files will likely both be greater than 20 gb
-# in size.
-RAW_DATA_DIR = p.RAW_DATA_DIR
-# The chunked, compressed data files will be stored in output_dir. Note that
-# these files are likely to total more than 5 gb.
-CORPUS_DIR = p.CORPUS_DIR
-# Directory to which to output test data files if option is selected.
-TEST_DIR = p.TEST_DIR
-PROCESS_GARBAGE_MARKER = p.PROCESS_GARBAGE_MARKER
-
-# Define two translation maps for removing punctuation via str.translate,
-# which is very efficient. The first will consist of punctuation to remove.
-# The second will consist of punctuation around which to insert spaces,
-# so that occurrences can be treated as tokens when splitting on white space.
-# Periods, exclamation points, and question marks are handles in the code,
-# and are used to split documents.
-punctuation_exclude = "#$&*+<=>@[\\]^_`{|}~%"
-translation_exclude = str.maketrans({
-    char: '' for char in punctuation_exclude
-})
-punctuation_include = "-()/;,:!.?'\""
-translation_include = str.maketrans({
-    char: f' {char} ' for char in punctuation_include
-})
+from article import Article
 
 
 def main():
-    generate_corpus()
+    generate_corpus('./my_config.yaml')
 
 
 def generate_corpus(
-        xml_url: str = WIKIPEDIA_XML_DUMP_URL,
-        raw_data_dir: str = RAW_DATA_DIR,
-        output_dir: str = CORPUS_DIR,
-        test_data_dir: None | str = None,
-        test_articles: int = 100
+    config_file_path: str = './default_config.yaml'
 ):
+    # Validate yaml configuration file and build dictionary of arguments.
+    args = validate_configuration(config_file_path)
+
     # Get data file if not already acquired.
     get_wikipedia_dump(
-        xml_url, raw_data_dir, test_data_dir, test_articles
+        args['mode'],
+        args['num_test_articles'],
+        args['xml_file_url'],
+        args['raw_data_dir'],
+        args['test_data_dir']
     )
+    print("\n" + "-------------------------------" + "\n")
 
-    # Extract documents and export them to a text file..
+    # Extract documents and export them to a text file.
     extract_documents(
-        xml_url, raw_data_dir, test_data_dir, test_articles
+        args['document_type'],
+        args['mode'],
+        args['num_test_articles'],
+        args['xml_file_url'],
+        args['raw_data_dir'],
+        args['intermediate_data_dir'],
+        args['test_data_dir'],
+        args['translation_include'],
+        args['translation_exclude'],
+        args['marker_garbage_processing'],
+        args['marker_paragraph_break']
     )
+    print("\n" + "-------------------------------" + "\n")
 
     # Randomize documents in document text file and store them in manageable
-    # "chunks" of 1,000,000 documents in compressed files. These files amount
-    # to about 150 files of 38 gb each.
-    chunk_documents_to_files(
-        os.path.join(raw_data_dir, 'documents.txt'),
-        1_000_000, output_dir
-    )
+    # "chunks" in numbered compressed files.
+    # chunk_documents_to_files(
+    #     os.path.join(intermediate_data_dir, 'documents.txt'),
+    #     chunk_size, output_dir
+    # )
+
+
+def validate_configuration(
+        config_file_path: str
+) -> dict[str: str | int | None]:
+    with open(config_file_path, 'r') as file:
+        data = yaml.safe_load(file)
+
+    return_values = dict()
+
+    # Get type of document to be generated.
+    document_type = data['document_type']
+    if (
+            type(document_type) is not str or
+            document_type not in ['sentence', 'paragraph', 'article']
+    ):
+        raise ValueError(
+            "'document_type' must be one of 'sentence', 'paragraph', "
+            "or 'article'."
+        )
+    return_values['document_type'] = document_type
+
+    # Get whether test data or production data is to be generated. If test
+    # data is to be generated, get number of test articles to be generated.
+    mode = data['mode']  # type: str
+    if (
+            type(mode) is not str or
+            mode not in ['testing', 'production']
+    ):
+        raise ValueError(
+            "'mode' must be one of 'testing' or 'production'."
+        )
+    if mode == 'testing':
+        num_test_articles = data['num_test_articles']  # type: int | None
+        if type(num_test_articles) is not int or num_test_articles < 1:
+            raise ValueError(
+                "'num_test_articles' must be a positive integer."
+            )
+    else:
+        num_test_articles = None
+    return_values['mode'] = mode
+    return_values['num_test_articles'] = num_test_articles
+
+    # If no value is specified for the xml file url, specify the url for a
+    # recent dump.
+    xml_file_url = data['xml_file_url']  # type: str | None
+    if xml_file_url is None:
+        dttm_now = pd.Timestamp.now()
+        if dttm_now.day > 14:
+            dttm_dump = dttm_now - pd.offsets.MonthBegin()
+        else:
+            dttm_dump = \
+                dttm_now - pd.offsets.MonthEnd() - pd.offsets.MonthBegin()
+        date_string = dttm_dump.strftime("%Y%m%d")
+        xml_file_url = (
+                "https://dumps.wikimedia.org/enwiki/" +
+                date_string + "/enwiki-" +
+                date_string + "-pages-articles-multistream.xml.bz2"
+        )
+    # If a value is specified, verify that the format is valid.
+    elif (
+            type(xml_file_url) is not str or
+            not xml_file_url.startswith(
+                "https://dumps.wikimedia.org/enwiki/") or
+            not xml_file_url.endswith("-pages-articles-multistream.xml.bz2") or
+            xml_file_url[41:43] != '01'
+    ):
+        raise ValueError(
+            "This does not appear to be a viable URL. Visit\n"
+            "https://dumps.wikimedia.org/enwiki/ for viable links\n"
+            "to recent wikipedia data dumps. Dumps generated on the 1st of\n"
+            "the month should be used, not dumps generated on the 20th. File\n"
+            "links on the dump-specific reference page should be of the form: "
+            "\n\n"
+            "\tenwiki-[year][month]01-pages-articles-multistream.txt"
+            ".bz2\n\n"
+            "Where year is the four digit year and month is the zero-padded\n"
+            "month."
+        )
+    check_url = data['check_url']  # type: bool
+    if type(check_url) is not bool:
+        raise ValueError(
+            "'check_url' must be of type bool."
+        )
+    # Finally, verify that the URL is reachable, if check_url is true
+    if check_url:
+        try:
+            response = requests.get(xml_file_url, stream=True)
+            if response.status_code != 200:
+                raise ValueError(
+                    "Was unable to make connection to wikipedia dump URL."
+                    "Are you trying to access a dump older than three months "
+                    "that is no longer hosted?"
+                )
+        except requests.exceptions.RequestException as e:
+            raise SystemExit(
+                f"The specified url is not reachable.\n"
+                f"Err: {e}"
+            )
+    return_values['xml_file_url'] = xml_file_url
+
+    raw_data_dir = data['raw_data_dir']  # type: str
+    if type(raw_data_dir) is not str:
+        raise ValueError(
+            "'raw_data_dir' must be of type str and a viable file path."
+        )
+    if not os.path.isdir(raw_data_dir):
+        try:
+            os.makedirs(raw_data_dir)
+        except(
+                f"Was unable to create directory at {raw_data_dir}"
+        ):
+            exit(1)
+    return_values['raw_data_dir'] = raw_data_dir
+
+    intermediate_data_dir = data['intermediate_data_dir']  # type: str
+    if type(intermediate_data_dir) is not str:
+        raise ValueError(
+            "'intermediate_data_dir' must be of type str "
+            "and a viable file path."
+        )
+    if not os.path.isdir(intermediate_data_dir):
+        try:
+            os.makedirs(intermediate_data_dir)
+        except(
+                f"Was unable to create directory at {intermediate_data_dir}"
+        ):
+            exit(1)
+    return_values['intermediate_data_dir'] = intermediate_data_dir
+
+    corpus_dir = data['corpus_dir']  # type: str
+    if type(corpus_dir) is not str:
+        raise ValueError(
+            "'corpus_dir' must be of type str and a viable file path."
+        )
+    if not os.path.isdir(corpus_dir):
+        try:
+            os.makedirs(corpus_dir)
+        except(
+                f"Was unable to create directory at {corpus_dir}"
+        ):
+            exit(1)
+    return_values['corpus_dir'] = corpus_dir
+
+    test_data_dir = data['test_data_dir']  # type: str
+    if type(test_data_dir) is not str:
+        raise ValueError(
+            "'test_data_dir' must be of type str and a viable file path."
+        )
+    if not os.path.isdir(test_data_dir):
+        try:
+            os.makedirs(test_data_dir)
+        except(
+                f"Was unable to create directory at {test_data_dir}"
+        ):
+            exit(1)
+    return_values['test_data_dir'] = test_data_dir
+
+    documents_per_corpus_file = \
+        data[f'documents_per_corpus_file_{document_type}']  # type: int | None
+    if not (
+        (type(documents_per_corpus_file) is int and
+         documents_per_corpus_file > 0) or
+        type(documents_per_corpus_file) is None
+    ):
+        raise ValueError(
+            f"'documents_per_corpus_file_{document_type} must be an integer "
+            f"greater than 0 or None."
+        )
+    return_values['documents_per_corpus_file'] = documents_per_corpus_file
+
+    marker_garbage_processing = data['marker_garbage_processing']  # type: str
+    if type(marker_garbage_processing) is not str:
+        raise ValueError(
+            "'marker_garbage_processing' must be of type str."
+        )
+    return_values['marker_garbage_processing'] = marker_garbage_processing
+
+    marker_paragraph_break = data['marker_paragraph_break']  # type: str
+    if type(marker_paragraph_break) is not str:
+        raise ValueError(
+            "'marker_paragraph_break' must be of type str."
+        )
+    if marker_paragraph_break != "uvmr_ev_paragraph_break":
+        warnings.warn(
+            "Failure to use the default value of 'uvmr_ev_paragraph_break'"
+            "for 'marker_paragraph_break' will result in a corpus that may "
+            "not be compatible with other products intended to use the "
+            "corpuses generated by this code."
+        )
+    return_values['marker_paragraph_break'] = marker_paragraph_break
+
+    # Define two translation maps for removing punctuation via str.translate,
+    # which is very efficient. The first will consist of punctuation to remove.
+    # The second will consist of punctuation around which to insert spaces,
+    # so that occurrences can be treated as tokens when splitting on white space.
+    # Periods, exclamation points, and question marks are handles in the code,
+    # and are used to split documents. Quotation marks are included if
+    # DOCUMENT_TYPE is 'paragraph', and excluded if DOCUMENT_TYPE is 'sentence'.
+    if document_type == "sentence":
+        punctuation_exclude = "#$&*+<=>@[\\]^_`{|}~%\""
+        punctuation_include = "-()/;,:!.?'"
+    else:
+        punctuation_exclude = "#$&*+<=>@[\\]^_`{|}~%"
+        punctuation_include = "-()/;,:!.?'\""
+
+    translation_exclude = str.maketrans({
+        char: '' for char in punctuation_exclude
+    })
+    return_values['translation_exclude'] = translation_exclude
+
+    translation_include = str.maketrans({
+        char: f' {char} ' for char in punctuation_include
+    })
+    return_values['translation_include'] = translation_include
+
+    return return_values
 
 
 def get_wikipedia_dump(
-        xml_url: str = WIKIPEDIA_XML_DUMP_URL,
-        raw_data_dir: str = RAW_DATA_DIR,
-        test_data_dir: None | str = None,
-        test_articles: int = 100
+        mode: str,
+        num_test_articles: int,
+        xml_file_url: str,
+        raw_data_dir: str,
+        test_data_dir: None | str = None
 ) -> None:
     """
     Obtains a wikipedia text dump encoded as XML and compressed with bz2.
@@ -92,298 +296,286 @@ def get_wikipedia_dump(
 
     If a directory path is passed via test_data_dir, will generate a file
     named "Raw Data.txt" in that directory containing the raw file text from
-    the first line through the last line of the nth page, not including
-    redirects, where n = test_articles.
+    the first n wikepedia articles that are not redirects, where n =
+    num_test_articles.
 
-    :param xml_url: The url for the compressed wikipedia dump.
+    :param xml_file_url: The url for the compressed wikipedia dump.
     :param raw_data_dir: The directory to store the compressed data file in.
+    :param mode: Used to determine whether test data should be generated.
     :param test_data_dir: The directory in which to store a sample of the raw
     text of the file.
-    :param test_articles: The number of articles to export as test data if
+    :param num_test_articles: The number of articles to export as test data if
     test_data_dir is specified.
     :return: None.
     """
 
+    dttm_start = pd.Timestamp.now()
+    print(f"Beginning download of wikipedia xml dump at "
+          f"{dttm_start.strftime('%H:%M:%S')}")
+
     # Pull the file name off the end of the URL, and define the path to where
     # the file will be stored.
-    bz2_file_name = xml_url.rsplit('/', 1)[-1]
+    bz2_file_name = xml_file_url.rsplit('/', 1)[-1]
     bz2_file_path = os.path.join(raw_data_dir, bz2_file_name)
 
     # Check if xml_file has already been downloaded
     if os.path.exists(bz2_file_path):
         print("Compressed XML data file found in raw data directory...\n"
               "Download of compressed XML data file canceled.")
+        downloaded = False
     else:
-        # Download and extract wikipedia dump.
-        print("Downloading compressed XML data file...")
-        response = requests.get(xml_url)
-        if not response:
-            raise FileNotFoundError(
-                f"Request for file at {xml_url} returned "
-                f"{response.status_code}."
-            )
-        else:
-            with bz2.BZ2File(bz2_file_path, 'wb') as out_file:
-                out_file.write(response.content)
-            print("Compressed XML data file successfully downloaded.")
+        wget.download(xml_file_url, bz2_file_path)
+        downloaded = True
 
-    # If a path to a test data directory is specified, output raw text of
+    # If testing mode is specified, output raw text of
     # specified number of articles to "Raw Data.txt", leaving a blank line in
-    # between each line for readability.
-    if test_data_dir:
-        print(f"Generating 'Raw Data.txt' in test directory. "
-              f"Including first {test_articles}...")
+    # between each line of the dump for readability.
+    if mode == 'testing':
+        date_of_dump = (bz2_file_name[7:15])
+        print(f"Generating raw data file in test directory. "
+              f"Including first {num_test_articles} articles...")
         test_data_dir = os.path.join(
-            test_data_dir, "Raw Data.txt"
+            test_data_dir,
+            "XML File Creation Date " + date_of_dump +
+            " - Raw Data.txt"
         )
         with (
             bz2.BZ2File(bz2_file_path, 'rb') as in_file,
             open(test_data_dir, 'w') as test_data_file
         ):
-            articles_extracted = 0
-            for line in in_file:
-                line = line.decode('utf-8')
-                # Add a blank line between lines for readability.
-                test_data_file.write(line + '\n')
-                if line == "  </page>\n":
-                    articles_extracted += 1
-                if line.startswith("    <redirect title="):
-                    articles_extracted -= 1
-                if articles_extracted >= test_articles:
-                    break
-        print("'Raw Data.txt' generated.")
+            test_data_file.write(
+                f"This file contains the raw article text for the first "
+                f"{num_test_articles} articles in the wikipedia data file. "
+                f"Data file ines are "
+                f"separated by blank lines for purposes of readability. Only "
+                f"articles from namespace 0 (subject-specific articles) that "
+                f"are not redirects are included.\n"
+            )
+            current_article = 1
+            article_lines = list()
 
-    # Put a blank line after console output
-    print()
+            for line in in_file:
+                # Convert from binary string
+                line = line.decode('utf-8')
+                if "<page>" in line:
+                    article_lines = list()
+                elif "</page>" in line:
+                    article = Article(article_lines)
+                    # Wikipedia articles are in namespace 0, and we are not
+                    # interested in redirect pages, which contain no useful
+                    # text.
+                    if article.namespace == 0 and not article.is_redirect_page:
+                        test_data_file.write(
+                            f"\n\n\n\n"
+                            f"*********** Article {current_article}: "
+                            f"{article.title} ***********"
+                            f"\n\n\n"
+                        )
+                        for article_line in article.lines:
+                            if article_line != '':
+                                test_data_file.write(article_line + '\n\n')
+                        current_article += 1
+                else:
+                    article_lines.append(line)
+                if current_article > num_test_articles:
+                    break
+        print(f"'Raw Data.txt' generated for first {num_test_articles} "
+              f"articles.")
+
+    dttm_finish = pd.Timestamp.now()
+    dttm_delta = (dttm_finish - dttm_start).total_seconds() / 60
+    file_size = os.path.getsize(bz2_file_path)
+    print(f"Finished at "
+          f"{dttm_finish.strftime('%H:%M:%S')}.")
+    if downloaded:
+        print(f"Elapsed Time: {dttm_delta:,.2f} minutes.")
+    print(f"File Size: {file_size / (1024 ** 3):,.4} GB")
 
 
 def extract_documents(
-        xml_url: str = WIKIPEDIA_XML_DUMP_URL,
-        raw_data_dir: str = RAW_DATA_DIR,
-        test_data_dir: None | str = None,
-        test_articles: int = 100
+        document_type: str,
+        mode: str,
+        num_test_articles: int,
+        xml_file_url: str,
+        raw_data_dir: str,
+        intermediate_data_dir: str,
+        test_data_dir: str,
+        translation_include: dict,
+        translation_exclude: dict,
+        marker_garbage_processing: str,
+        marker_paragraph_break: str
 ) -> None:
-    """
-    Processes a wikipedia text dump in XML format compressed via bz2. Does
-    not decompress file or read it into memory, rather processing the text
-    file a single line at a time to preserve memory. Generates a text output
-    file with one document generated from the input file per line. See the
-    documentation for process_paragraph for details on document format.
-
-    Text output files are large, typically more than 20GB. Frequent flushing
-    of the write buffer for this file prevents excess memory usage as it is
-    created.
-
-    Generation of documents is a two step process. First, lines are filtered
-    to remove xml tags and low value structures such as tables, captions,
-    and headers. This takes place in the body of this method. Then lines are
-    processed to remove citations, collapse templates, replace hyperlinks,
-    and so forth. This takes place in the body of process_paragraph.
-
-    If a directory path is passed via test_data_dir, will generate a file
-    named "Filtered Data.txt" in that directory containing the lines not
-    filtered out in the body of this method. Will also pass this directory to
-    process_paragraph, which will create a file named "Processed Data.txt"
-    containing the final documents.
-
-    :param xml_url: The url for the compressed wikipedia dump.
-    :param raw_data_dir: The directory to store the compressed data file in.
-    :param test_data_dir: The directory in which to store a sample of the
-    filtered text of the file.
-    :param test_articles: The number of articles to export as test data if
-    test_data_dir is specified.
-    :return: None.
-    """
+    dttm_start = pd.Timestamp.now()
+    print(f"Beginning extraction of documents from input file at "
+          f"{dttm_start.strftime('%H:%M:%S')}")
 
     # Pull the file name off the end of the URL, and define the path to where
     # the input file is stored.
-    input_file_name = xml_url.rsplit('/', 1)[-1]
-    input_file_path = os.path.join(raw_data_dir, input_file_name)
+    bz2_file_name = xml_file_url.rsplit('/', 1)[-1]
+    bz2_file_path = os.path.join(raw_data_dir, bz2_file_name)
 
-    # Whenever a line is identified in the input xml file that looks like a
-    # paragraph of potential input text, we will call process_paragraph on it
-    # and also hand off the document_storage_file object for
-    # process_paragraph to write documents to. Where document_storage_file
-    # will point will depend on whether we are generating test data.
-    if test_data_dir:
-        # If generating test data, document_storage_file will point to
-        # "Processed Data.txt in our test directory.
+    date_of_dump = (bz2_file_name[7:15])
+
+    # If in testing mode, we point document_storage_file at our test directory.
+    # We also point filtered_data_file at the same directory
+    if mode == 'testing':
         document_storage_file = open(
-            os.path.join(test_data_dir, "Processed Data.txt"), 'w'
+            os.path.join(
+                test_data_dir,
+                "XML File Creation Date " + date_of_dump +
+                f" - Documents - {document_type.capitalize()} Level.txt"
+            ), 'w'
         )
-        # We will create "Filtered Data.txt" in our test directory to store
-        # paragraphs as passed to process_paragraph.
-        test_data_file = open(
-            os.path.join(test_data_dir, "Filtered Data.txt"), 'w'
+        document_storage_file.write(
+            f"This file contains the documents generated for the first "
+            f"{num_test_articles} articles in the wikipedia file. "
+            f"Documents are "
+            f"separated by blank lines for purposes of readability. Only "
+            f"articles from namespace 0 (subject-specific articles) that "
+            f"are not redirects are included. Documents in this file were "
+            f"generated at the {document_type} level."
         )
+        filtered_data_file = open(
+            os.path.join(
+                test_data_dir,
+                "XML File Date " + date_of_dump +
+                f" - Filtered Data.txt"
+            ), 'w'
+        )
+        filtered_data_file.write(
+            f"This file contains the raw paragraphs identified for document "
+            f"extraction for the first "
+            f"{num_test_articles} articles in the wikipedia file. Paragraphs "
+            f"are "
+            f"separated by blank lines for purposes of readability. Only "
+            f"articles from namespace 0 (subject-specific articles) that "
+            f"are not redirects are included."
+        )
+    # Otherwise we will point document_storage_file at our intermediate data
+    # directory, and we will assign None to test_data_file.
     else:
         document_storage_file = open(
-            os.path.join(raw_data_dir, "documents.txt"), 'w'
+            os.path.join(
+                intermediate_data_dir,
+                "Input Creation Date " + date_of_dump +
+                f" - Documents - {document_type.capitalize()} Level.txt"
+            ), 'w'
         )
-        test_data_file = None
+        filtered_data_file = None
 
     # Initialize some counters with which to report progress via stdout
     articles_extracted = 0
     documents_generated = 0
-    # Used to prevent occasionally printing same line to stdout more than once
-    last_article_count_out = 0
 
-    print(f"Beginning extraction of documents from input file at "
-          f"{pd.Timestamp.now().strftime('%H:%M:%S')}")
-
-    with bz2.BZ2File(input_file_path, 'r') as file:
-        print(f"Successfully accessed input file...\n")
-        # We will look at each line of the wikipedia xml dump file, weeding
-        # out lines that are not human-readable paragraphs of text.
+    with bz2.BZ2File(bz2_file_path, 'r') as file:
+        print(f"Successfully accessed bz2 input file...\n")
+        lines = list()
         for line in file:
             # Convert from binary string
             line = line.decode('utf-8')
-            # Strip leading whitespace - xml tags are variably indented for
-            # readability
-            line = line.lstrip()
-            # Check to see if we've completed an article, and update console
-            # if appropriate - and skip the line
-            if line == "</page>\n":
+            # Strip whitespace - xml tags are variably indented for
+            # readability and the newline is inconvenient
+            line = line.strip()
+            # As we iterate through the lines of an article, we will determine
+            # whether it is a wikipedia article (namespace 0) and
+            # whether it is a redirect. This will prevent us from
+            # unnecessarily making Article objects.
+            if line == '<page>':
+                lines = list()
+                correct_name_space = False
+                is_a_redirect = False
+            elif (
+                    line == '</page>' and
+                    correct_name_space and
+                    not is_a_redirect
+            ):
+                article = Article(lines)
+                paragraphs = article.get_paragraphs()
+                if mode == 'testing':
+                    filtered_data_file.write(
+                        f"\n\n\n\n"
+                        f"*********** Article {articles_extracted + 1}: "
+                        f"{article.title} ***********"
+                        f"\n\n"
+                    )
+                    document_storage_file.write(
+                        f"\n\n\n\n"
+                        f"*********** Article {articles_extracted + 1}: "
+                        f"{article.title} ***********"
+                        f"\n\n"
+                    )
+                article_level_document = str()
+                for paragraph in paragraphs:
+                    if mode == 'testing':
+                        filtered_data_file.write(paragraph + '\n\n')
+                    documents = process_paragraph(
+                        paragraph, document_type,
+                        translation_include, translation_exclude,
+                        marker_garbage_processing
+                    )
+                    if document_type in ['sentence', 'paragraph']:
+                        for document in documents:
+                            document_storage_file.write(document + '\n')
+                            if filtered_data_file:
+                                document_storage_file.write('\n')
+                        documents_generated += len(documents)
+                    else:
+                        article_level_document += documents[0]
+                        article_level_document += f" {marker_paragraph_break} "
+                if document_type == 'article':
+                    document_storage_file.write(article_level_document + '\n')
+                    documents_generated += 1
+                # If we don't call flush on the storage buffer, it will
+                # accumulate data until we close the file, and overflow
+                # memory.
+                document_storage_file.flush()
+
                 articles_extracted += 1
-                if (
-                        articles_extracted % 100_000 == 0 and
-                        articles_extracted > last_article_count_out
-                ):
+                if articles_extracted % 10_000 == 0:
                     print(f"Extracted Article {articles_extracted:,}: "
                           f"{documents_generated:,} Documents Generated.")
-                    last_article_count_out = articles_extracted
-                continue
-            # Check for redirects. Redirects are also marked up with
-            # <page></page>, but contain no lines that aren't filtered out.
-            # Therefore, they can be used to avoid over-counting the number of
-            # articles actually parsed.
-            if line.startswith("<redirect title="):
-                articles_extracted -= 1
-            # Skip all very short lines - This solves an enormous number of
-            # miscellaneous problems, and excludes very few text blocks of
-            # interest.
-            if len(line) < 100:
-                continue
-            # Skip lines enclosed in carets - most of the xml markup
-            if line.startswith('<') and line.endswith('>\n'):
-                continue
-            # Skip lines starting and ending with two curly brackets
-            # These are almost always a hyper-linked word or phrase.
-            # Eliminates the very rare block of text that starts and ends
-            # with a hyperlink.
-            if line.startswith('{{') and line.endswith('}}\n'):
-                continue
-            # Skip lines starting and ending with two (or more) equals signs
-            # Gets rid of section headers
-            if line.startswith('==') and line.endswith('==\n'):
-                continue
-            # Skip lines starting with "<text bytes="
-            # These serve some function in each article, but review of 100
-            # occurrences show no line containing useful text.
-            if line.startswith("<text bytes="):
-                continue
-            # Skip lines starting with "{{" and ending with "}}</text>"
-            # These appear to have something to do with redirects
-            if line.startswith("{{") and line.endswith("}}</text>"):
-                continue
-            # Eliminate picture links and descriptions
-            if line.startswith("[[File:"):
-                continue
-            # Remove hidden editor comments
-            if line.startswith("&lt;!--"):
-                continue
-            # Remove tables
-            if (
-                    line.startswith("{|class=") or
-                    line.startswith("{| class=") or
-                    line.startswith("|") or
-                    line.startswith("!")
-            ):
-                continue
-            # Remove lists
-            if line.startswith('*'):
-                continue
-            # Remove category links
-            if (line.startswith("[[") and line.endswith("]]\n")) or \
-               (line.startswith("[[") and line.endswith("]]</text>\n")):
-                continue
-            # Removes both components of "{{ ... }}" routinely broken up over
-            # multiple lines
-            if line.startswith("{{") and "}}" not in line[2:]:
-                continue
-            if line == "}}\n" or line == "}}<\text>\n":
-                continue
-            # Remove numbered lists
-            if line.startswith("#"):
-                continue
-            # Remove some equations:
-            if (line.startswith(":&lt;math") and
-                line.endswith("/math&gt;\n")):
-                continue
-            # Remove a particular style of making references
-            if (line.startswith("&lt;ref name=") and
-                line.endswith("/ref&gt;\n")):
-                continue
-            # We're now likely looking at a line that is a paragraph of
-            # human-readable data. We pass that to process_paragraph,
-            # which returns the number of documents, along with the file
-            # pointer we want process_paragraph to append the documents to.
-            documents_generated += process_paragraph(
-                document_storage_file, line, bool(test_data_file)
-            )
-
-            # If test_data_file is not None, and the number of articles
-            # extracted is less than test_articles, write the filtered line
-            # to "Filtered Data.txt".
-            if test_data_file:
-                # Add a blank line between lines for readability.
-                test_data_file.write(line + '\n')
-                if articles_extracted >= test_articles:
+                if filtered_data_file and \
+                        articles_extracted >= num_test_articles:
                     break
+            else:
+                lines.append(line)
+                if (
+                        line.startswith('<ns>') and
+                        line == '<ns>0</ns>'
+                ):
+                    correct_name_space = True
+                if line.startswith('<redirect title='):
+                    is_a_redirect = True
 
     # Clean-up
-    if test_data_file:
-        test_data_file.close()
+    if filtered_data_file:
+        filtered_data_file.close()
     document_storage_file.close()
 
-    print(f"\nFinished extracting documents from articles at "
-          f"{pd.Timestamp.now().strftime('%H:%M:%S')}.\n"
+    dttm_finish = pd.Timestamp.now()
+    dttm_delta = (dttm_finish - dttm_start).total_seconds() / 60
+    print(f"\nFinished extracting documents from input file at "
+          f"{dttm_finish.strftime('%H:%M:%S')}.\n"
+          f"Elapsed Time: {dttm_delta:,.2f} minutes."
           f"Extracted {articles_extracted:,} articles.\n"
           f"Extracted {documents_generated:,} documents.\n")
 
 
 def process_paragraph(
-        document_storage_file: typing.TextIO,
         paragraph: str,
-        insert_blank_line: bool = False
-) -> int:
-    """
-    Takes a string consisting of a line from a wikipedia text dump. If this
-    string comes from extract_documents, then there is a high probability
-    that it is a paragraph of text. The body of this method applies
-    processing to the paragraph to collapse templates, remove hyperlinks and
-    citations, and perform other cleanup to prepare it to be split into
-    sentences, which will be stored as individual documents.
-
-    This method takes a pointer to a text file to which to append the
-    documents, and flushes the write buffer of the pointer before it returns,
-    preventing excessive use of memory.
-
-    If insert_blank_line is True, then a blank line is inserted between
-    documents for readability. This is intended to make test files more
-    readable.
-
-    :param document_storage_file: Pointer to text file to which documents
-    should be appended.
-    :param paragraph: A string to be processed into documents
-    :param insert_blank_line: Whether to insert blank lines between documents
-    in document_storage_file.
-    :return: The number of documents appended to document_storage_file.
+        document_type: str,
+        translation_include: dict,
+        translation_exclude: dict,
+        marker_garbage_processing: str
+) -> list[str]:
     """
 
-    # First apply all processes that will significantly shorten the block of
-    # text, and then check to see if length has become insignificant before
-    # doing further cleanup.
+    :param translation_exclude:
+    :param translation_include:
+    :param paragraph:
+    :param document_type:
+    :return:
+    """
 
     # Deal with language templates
     langs = re.findall("\{\{lang\|.*?}}", paragraph)
@@ -403,14 +595,14 @@ def process_paragraph(
         fragments = conversion[2:-2].split('|')
         substitution = fragments[1] + ' '
         if len(fragments) >= 3 and fragments[2] not in [
-                '-', '–', 'and', 'and(-)', 'or', 'to', 'to(-)',
-                'to about', '+/-', '±', '+', ',', ', and', ', or',
-                'by', 'x', '×', 'xx', '*']:
+            '-', '–', 'and', 'and(-)', 'or', 'to', 'to(-)',
+            'to about', '+/-', '±', '+', ',', ', and', ', or',
+            'by', 'x', '×', 'xx', '*']:
             substitution += fragments[2]
         elif len(fragments) >= 5:
             substitution += fragments[4]
         else:
-            substitution = PROCESS_GARBAGE_MARKER
+            substitution = marker_garbage_processing
         substitution = re.sub(r"[\[\]]", '', substitution)
         paragraph = paragraph.replace(conversion, substitution, 1)
 
@@ -447,12 +639,6 @@ def process_paragraph(
             substitution = str(fragments[1:])
         paragraph = paragraph.replace(link, substitution, 1)
 
-    # Again kill blocks of text of less than 100 characters (We did this
-    # before process_paragraph, but have now shortened our potential
-    # paragraphs a lot.)
-    if len(paragraph) < 100:
-        return 0
-
     # Removing other special XML characters and odds and ends
     paragraph = re.sub(
         r"&amp;|nbsp;",
@@ -460,7 +646,7 @@ def process_paragraph(
     )
 
     # Replace &quot; with double quotes, which are not otherwise used.
-    paragraph = re.sub(r"&quot;",'"', paragraph)
+    paragraph = re.sub(r"&quot;", '"', paragraph)
 
     # Deal with "''" and "'''" used for italics and bold notation - do not
     # remove single "'"
@@ -475,11 +661,15 @@ def process_paragraph(
     # Comma-separated numbers need their commas pulled
     paragraph = re.sub(r"([0-9]),([0-9])", r"\1\2", paragraph)
 
-    # Remove punctuation that we want to ignore
+    # Remove punctuation that we want to ignore - note that if DOCUMENT_TYPE
+    # is "sentence" then this will remove double quotes, which will desirably
+    # affect downstream processing.
     paragraph = paragraph.translate(translation_exclude)
 
     # Splitting will involve periods, but we need to deal with special cases
-    # where periods are used for non-sentence ending purpose.
+    # where periods are used for non-sentence ending purpose. For
+    # consistency, we will perform this processing even if we are generating
+    # paragraph level documents.
 
     # Need to replace e.g., i.e., etc., etc...
     paragraph = re.sub(r"e\.g\.", "for example", paragraph)
@@ -504,45 +694,44 @@ def process_paragraph(
     # Set all characters to lower case
     paragraph = paragraph.lower()
 
-    # Split into documents - strings of tokens separated by spaces
-    documents = split_paragraph(paragraph)
+    # Split into sentence level documents - strings of tokens separated by
+    # spaces
+    sentences = split_paragraph(paragraph, translation_include)
 
-    # We'll create a 'documents_generated' variable to track how many
-    # we've created so we can return that data.
-    documents_generated = 0
+    documents = list()
+
     # We'll split our documents into lists to do some final cleanup -
     # basically just eliminating some very short documents that contain
     # non-alphabetic characters.
-    for document in documents:
+    for sentence in sentences:
         # Split document on spaces
-        document = document.split()
-        # For documents of four or less tokens, if any but the last token
+        sentence = sentence.split()
+        # For documents of four or fewer tokens, if any but the last token
         # consists of anything but letters, ditch the document. This
         # accommodates very short phrases, but eliminates a fair amount of
         # noise. More relevant to eventual incorporation of data sources
-        # involving character speech: "Yes.", "No.", "That way.", "I guess so."
-        if len(document) <= 4:
+        # involving character speech: "Yes.", "No.", "That way.",
+        # "I guess so."
+        if len(sentence) <= 4:
             drop = False
-            for token in document[0:-1]:
+            for token in sentence[0:-1]:
                 if not token.isalpha():
                     drop = True
             if drop:
                 continue
-        documents_generated += 1
-        document_storage_file.write(' '.join(document) + '\n')
-        # If we're generating test data, we'll add a blank line in between
-        # documents for readability:
-        if insert_blank_line:
-            document_storage_file.write('\n')
-    # If we don't call flush on the storage buffer, it will accumulate data
-    # until we close the file, and overflow memory.
-    document_storage_file.flush()
-    # Return the number of documents we've added to the storage file.
-    return documents_generated
+        sentence = ' '.join(sentence)
+        documents.append(sentence)
+
+    if document_type == 'sentence':
+        return documents
+    else:
+        documents = [' '.join(documents)]
+        return documents
 
 
 def split_paragraph(
-        paragraph: str
+        paragraph: str,
+        translation_include: dict
 ) -> list[str]:
     """
     Takes a paragraph and splits it into sentences, using the characters in
@@ -550,6 +739,7 @@ def split_paragraph(
 
     :param paragraph: A cleaned up, usually multi-sentence block of
     human-readable text.
+    :param translation_include:
     :return: A list of strings, each stream consisting of a document,
     with tokens separated by whitespace.
     """
@@ -586,8 +776,8 @@ def split_paragraph(
 
 def chunk_documents_to_files(
         document_storage_filepath: str,
-        documents_per_file: int = 1_000_000,
-        output_filepath: str = CORPUS_DIR
+        documents_per_file: int,
+        output_filepath: str
 ) -> None:
     """
     Takes as input a text file with one document per line. Randomizes the
@@ -619,10 +809,9 @@ def chunk_documents_to_files(
 
     # Create all of our files except for the last one
     for file_num in range(num_files - 1):
-        file_documents = documents[
-            file_num * documents_per_file:(
-            file_num + 1) * documents_per_file
-        ]
+        start = file_num * documents_per_file
+        stop = (file_num + 1) * documents_per_file
+        file_documents = documents[start:stop]
         # Store as binary bz2 file.
         dump_file(
             file_documents,
@@ -642,7 +831,7 @@ def chunk_documents_to_files(
 def dump_file(
         document_list: list[str],
         title: str,
-        dir_path: str = CORPUS_DIR
+        dir_path: str
 ) -> None:
     """
     A very simple method that stores a list of strings as a compressed binary

@@ -1,0 +1,60 @@
+
+
+# Specify document type to be generated. Must be one of "sentence",
+# "paragraph", and "article".
+document_type: sentence
+
+# Specify whether operating in test mode or production mode. Must be one of
+# 'testing' and 'production'
+mode: testing
+
+# Specify the number of articles to generate test data from.
+num_test_articles: 100
+
+# Specify URL for wikipedia text dump. Specifying null will fetch the dump
+# generated at the beginning of the current month if it is after the 14th,
+# or the dump generated at the beginning of the previous month if the
+# day is the 14th or earlier. Wikipedia continues to make dumps accessible
+# for three months after generation.
+xml_file_url:
+  https://dumps.wikimedia.org/enwiki/20220601/enwiki-20220601-pages-articles-multistream.xml.bz2
+
+# Specify whether to verify the validity of the xml_file_url. Set to
+# false if you are using an older dump file that is no longer hosted, and
+# which is already present in raw_data_dir
+check_url: true
+
+# Specify directory for storage of downloaded wikipedia text dump. This file,
+# compressed, will be about 21 GB.
+raw_data_dir:
+  /home/denis/Data/PyCharm Data/UVMR_Essential_Vocabulary/Raw Data
+
+# Specify directory for storage of document files. These are uncompressed
+# text files that will be about XX GB in size, regardless of whether they
+# consist of sentence, paragraph, or page level documents.
+intermediate_data_dir:
+  /home/denis/Data/PyCharm Data/UVMR_Essential_Vocabulary/Intermediate Data
+
+# Specify directory for storage of final, compressed, randomized corpus files.
+corpus_dir:
+  /home/denis/Data/PyCharm Data/UVMR_Essential_Vocabulary/Corpuses
+
+# Specify directory for output of test data
+test_data_dir:
+  ./Data/Test Data
+
+# Specify the number of documents to include in individual compressed data 
+# files. Smaller values will result in more, smaller files. To generate a 
+# single output file, enter null. Default values here are chosen to generate
+# files just under 100 mb.
+documents_per_corpus_file_sentence: 100000
+documents_per_corpus_file_paragraph: 20000
+documents_per_corpus_file_article: 5000
+
+# Specify garbage marker. It is highly recommended that the default value be
+# used.
+marker_garbage_processing: uvmr_ev_garbage_processing
+
+# Specify paragraph marker. It is highly recommend that the default value be
+# used.
+marker_paragraph_break: uvmr_ev_paragraph_break
