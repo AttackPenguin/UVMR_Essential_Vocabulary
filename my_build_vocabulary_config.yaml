@@ -1,0 +1,10 @@
+
+
+corpus_dir_path:
+  /home/denis/Data/PyCharm Data/UVMR_Essential_Vocabulary/Corpuses
+
+num_tokens: 50000
+
+vocab_file_path:
+  ./Data/Vocabulary
+

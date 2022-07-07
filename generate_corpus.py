@@ -588,6 +588,7 @@ def process_paragraph(
     :param translation_include:
     :param paragraph:
     :param document_type:
+    :param marker_garbage_processing:
     :return:
     """
 
