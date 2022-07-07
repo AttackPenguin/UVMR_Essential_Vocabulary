@@ -30,7 +30,10 @@ class Article:
                 self.title = match.group(1)
         self._paragraphs = None  # type: list[str] | None
 
-    def get_paragraphs(self) -> list[str] | None:
+    def get_paragraphs(
+            self,
+            namespaces: list[int] | None = None
+    ) -> list[str] | None:
         # If this data has already been generated, don't waste resources
         # generating it again.
         if self._paragraphs is not None:
@@ -38,6 +41,11 @@ class Article:
 
         # There are no useful paragraphs on redirect pages.
         if self.is_redirect_page:
+            return None
+
+        if namespaces is None:
+            namespaces = [0]
+        if self.namespace not in namespaces:
             return None
 
         paragraphs = list()

@@ -5,6 +5,7 @@ import os
 import pickle
 import random
 import re
+import shutil
 import warnings
 
 import pandas as pd
@@ -16,11 +17,11 @@ from article import Article
 
 
 def main():
-    generate_corpus('./my_config.yaml')
+    generate_corpus('my_generate_corpus_config.yaml')
 
 
 def generate_corpus(
-    config_file_path: str = './default_config.yaml'
+        config_file_path: str = './default_generate_corpus_config.yaml'
 ):
     # Validate yaml configuration file and build dictionary of arguments.
     args = validate_configuration(config_file_path)
@@ -53,10 +54,14 @@ def generate_corpus(
 
     # Randomize documents in document text file and store them in manageable
     # "chunks" in numbered compressed files.
-    # chunk_documents_to_files(
-    #     os.path.join(intermediate_data_dir, 'documents.txt'),
-    #     chunk_size, output_dir
-    # )
+    if args['mode'] == 'production':
+        chunk_documents_to_files(
+            args['document_type'],
+            args['xml_file_url'],
+            args['intermediate_data_dir'],
+            args['corpus_dir'],
+            args['documents_per_corpus_file']
+        )
 
 
 def validate_configuration(
@@ -218,9 +223,9 @@ def validate_configuration(
     documents_per_corpus_file = \
         data[f'documents_per_corpus_file_{document_type}']  # type: int | None
     if not (
-        (type(documents_per_corpus_file) is int and
-         documents_per_corpus_file > 0) or
-        type(documents_per_corpus_file) is None
+            (type(documents_per_corpus_file) is int and
+             documents_per_corpus_file > 0) or
+            type(documents_per_corpus_file) is None
     ):
         raise ValueError(
             f"'documents_per_corpus_file_{document_type} must be an integer "
@@ -438,7 +443,7 @@ def extract_documents(
         filtered_data_file = open(
             os.path.join(
                 test_data_dir,
-                "XML File Date " + date_of_dump +
+                "XML File Creation Date " + date_of_dump +
                 f" - Filtered Data.txt"
             ), 'w'
         )
@@ -454,12 +459,21 @@ def extract_documents(
     # Otherwise we will point document_storage_file at our intermediate data
     # directory, and we will assign None to test_data_file.
     else:
+        file_path = os.path.join(
+            intermediate_data_dir,
+            "XML File Creation Date " + date_of_dump +
+            f" - Documents - {document_type.capitalize()} Level.txt"
+        )
+        # If the file has already been generated, exit. We do not test for
+        # this if generating test data.
+        if os.path.exists(file_path):
+            print(
+                "Documents appear to have already been extracted to file.\n"
+                f"{file_path} exists..."
+            )
+            return None
         document_storage_file = open(
-            os.path.join(
-                intermediate_data_dir,
-                "Input Creation Date " + date_of_dump +
-                f" - Documents - {document_type.capitalize()} Level.txt"
-            ), 'w'
+            os.path.join(file_path), 'w'
         )
         filtered_data_file = None
 
@@ -775,9 +789,11 @@ def split_paragraph(
 
 
 def chunk_documents_to_files(
-        document_storage_filepath: str,
-        documents_per_file: int,
-        output_filepath: str
+        document_type: str,
+        xml_file_url: str,
+        intermediate_data_dir: str,
+        corpus_dir: str,
+        documents_per_corpus_file: int
 ) -> None:
     """
     Takes as input a text file with one document per line. Randomizes the
@@ -799,38 +815,86 @@ def chunk_documents_to_files(
     :return: None.
     """
 
-    # Load corpus into memory and shuffle it.
-    with open(document_storage_filepath, 'r') as file:
+    dttm_start = pd.Timestamp.now()
+    print(f"Beginning document chunking at "
+          f"{dttm_start.strftime('%H:%M:%S')}")
+
+    # Get input file path
+    bz2_file_name = xml_file_url.rsplit('/', 1)[-1]
+    date_of_dump = (bz2_file_name[7:15])
+    input_file_path = os.path.join(
+        intermediate_data_dir,
+        "XML File Creation Date " + date_of_dump +
+        f" - Documents - {document_type.capitalize()} Level.txt"
+    )
+
+    # Modify corpus directory path to point to subdirectory labeled with date
+    # of XML File Creation and Document Type
+    corpus_dir = os.path.join(
+        corpus_dir,
+        "XML File Creation Date " + date_of_dump +
+        f" - {document_type.capitalize()} Level"
+    )
+    # If there is an existing directory, wipe it to clear old corpus,
+    # then create empty directory.
+    if os.path.isdir(corpus_dir):
+        shutil.rmtree(corpus_dir)
+    try:
+        os.makedirs(corpus_dir)
+    except(
+        f"Was unable to create directory at {corpus_dir}"
+    ):
+        exit(1)
+
+    # Load corpus into memory and shuffle it. This requires considerable memory,
+    # but on-disk methods are fantastically slow. Note that calling list on the
+    # file is much more memory efficient than other, similar methods,
+    # for reasons that are unclear to me. This approach uses about the same
+    # amount of memory as the file occupies on disk.
+    print("Loading documents into memory. This may take a while...")
+    with open(input_file_path, 'r') as file:
         documents = list(file)
+    print("Shuffling documents. This will take even longer...")
     random.shuffle(documents)
 
     # Figure out how many files we're going to create
-    num_files = len(documents) // documents_per_file + 1
+    num_files = len(documents) // documents_per_corpus_file + 1
+    print(f"Generating {num_files} files...")
 
     # Create all of our files except for the last one
     for file_num in range(num_files - 1):
-        start = file_num * documents_per_file
-        stop = (file_num + 1) * documents_per_file
+        print(f"Generating file number {file_num+1}...")
+        start = file_num * documents_per_corpus_file
+        stop = (file_num + 1) * documents_per_corpus_file
         file_documents = documents[start:stop]
         # Store as binary bz2 file.
         dump_file(
             file_documents,
             f"corpus_file_{str(file_num + 1).rjust(3, '0')}_of_{num_files}",
-            output_filepath
+            corpus_dir
         )
     # Create our last file, consisting of less than documents_per_file
     # documents.
-    file_documents = documents[(num_files - 1) * documents_per_file:-1]
+    print(f"Generating file number {num_files}...")
+    file_documents = documents[(num_files - 1) * documents_per_corpus_file:-1]
     dump_file(
         file_documents,
-        f"corpus_file_{str(num_files).rjust(3, '0')}_of_{num_files}",
-        output_filepath
+        f"corpus_file_"
+        f"{str(num_files).rjust(2, '0')}"
+        f"_of_"
+        f"{str(num_files).rjust(2, '0')}",
+        corpus_dir
     )
+
+    dttm_finish = pd.Timestamp.now()
+    print(f"Finished at "
+          f"{dttm_finish.strftime('%H:%M:%S')}.")
+    print(f"Generated {num_files} files.")
 
 
 def dump_file(
         document_list: list[str],
-        title: str,
+        file_name: str,
         dir_path: str
 ) -> None:
     """
@@ -839,12 +903,11 @@ def dump_file(
     features.
 
     :param document_list: A list of document strings.
-    :param title: The title of the file. '.bz2' will be automatically appended.
+    :param file_name: The title of the file. '.bz2' will be automatically appended.
     :param dir_path: The output directory in which to store the file.
     :return: None.
     """
-    print(document_list[0])
-    with bz2.BZ2File(os.path.join(dir_path, title + '.bz2'), 'wb') as file:
+    with bz2.BZ2File(os.path.join(dir_path, file_name + '.bz2'), 'wb') as file:
         pickle.dump(document_list, file)
 
 
