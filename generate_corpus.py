@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import bz2
+import io
 import os
 import pickle
 import random
@@ -909,7 +910,9 @@ def dump_file(
     :return: None.
     """
     with bz2.BZ2File(os.path.join(dir_path, file_name + '.bz2'), 'wb') as file:
-        pickle.dump(document_list, file)
+        with io.TextIOWrapper(file, encoding='utf-8') as enc:
+            for document in document_list:
+                enc.write(document)
 
 
 if __name__ == "__main__":
